@@ -1,0 +1,20 @@
+{
+  "name": "asn-barcoding-system-backend",
+  "version": "1.0.0",
+  "description": "ASN barcoding system backend file",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^17.2.1",
+    "epxress": "^0.0.1-security",
+    "express": "^5.1.0",
+    "mongoose": "^8.18.0",
+    "nodemon": "^3.1.10"
+  }
+}
