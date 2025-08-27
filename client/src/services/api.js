@@ -31,3 +31,23 @@ export const receiveShipment = async (asnNumber) => {
   const response = await axios.post(`${API_URL}/asn/${asnNumber}/receive`);
   return response.data;
 };
+export const login = async (credentials) => {
+  const response = await axios.post(`${API_URL}/users/login`, credentials);
+  if (response.data.token) {
+    localStorage.setItem('userToken', response.data.token);
+  }
+  return response.data;
+};
+
+export const logout = () => {
+  localStorage.removeItem('userToken');
+};
+export const getPendingReviewShipments = async () => {
+  const response = await axios.get(`${API_URL}/asn?status=RECEIVED_PENDING_REVIEW`);
+  return response.data;
+};
+
+export const reviewShipment = async (asnNumber, reviewData) => {
+  const response = await axios.patch(`${API_URL}/asn/${asnNumber}/review`, reviewData);
+  return response.data;
+};

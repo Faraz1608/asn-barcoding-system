@@ -156,3 +156,41 @@ export const getAsns = async (req, res) => {
     res.status(500).json({ message: "Error fetching ASNs", error: error.message });
   }
 };
+export const reviewShipment = async (req, res) => {
+  try {
+    const { asnNumber } = req.params;
+    const { newStatus, notes } = req.body; // newStatus will be 'APPROVED_FOR_PAYMENT' or 'DISCREPANCY_REPORTED'
+
+    // Validate the new status
+    if (!['APPROVED_FOR_PAYMENT', 'DISCREPANCY_REPORTED'].includes(newStatus)) {
+      return res.status(400).json({ message: 'Invalid status update.' });
+    }
+
+    const asn = await Asn.findOne({ asnNumber: asnNumber });
+    if (!asn) {
+      return res.status(404).json({ message: 'ASN not found.' });
+    }
+
+    // A shipment must be pending review to be updated
+    if (asn.status !== 'RECEIVED_PENDING_REVIEW') {
+      return res.status(400).json({ message: `Cannot review shipment. Current status is: ${asn.status}` });
+    }
+
+    // Update status, notes, and history
+    asn.status = newStatus;
+    if (notes) {
+      asn.notes = notes;
+    }
+    asn.history.push({ status: newStatus });
+    await asn.save();
+
+    res.status(200).json({
+      asnNumber: asn.asnNumber,
+      status: asn.status,
+      message: `Shipment status updated to ${newStatus}.`
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating shipment status', error: error.message });
+  }
+};

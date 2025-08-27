@@ -14,5 +14,7 @@ router.put('/asn/:asnNumber/fulfill', asnController.fulfillAsn);
 // --- NEW ROUTE FOR GATEKEEPER ---
 router.post('/asn/:asnNumber/receive', asnController.receiveShipment);
 
+// --- NEW ROUTE FOR WAREHOUSE REVIEW ---
+router.patch('/asn/:asnNumber/review', asnController.reviewShipment);
 
 export default router;

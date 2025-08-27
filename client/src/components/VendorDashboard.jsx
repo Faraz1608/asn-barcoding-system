@@ -1,81 +1,137 @@
 import React, { useState, useEffect } from 'react';
 import { getAssignedShipments, fulfillShipment } from '../services/api';
+import {
+  Box, Heading, Text, VStack, Flex, Tag, Spacer, Button, Spinner,
+  Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton,
+  FormControl, FormLabel, Input, useDisclosure, useToast, Tabs, TabList, Tab, TabPanels, TabPanel
+} from '@chakra-ui/react';
+
+const getStatusColor = (status) => ({
+  'ORDERED': 'blue', 'IN_TRANSIT': 'orange', 'APPROVED_FOR_PAYMENT': 'green'
+}[status] || 'gray');
+
+const FulfillmentModal = ({ isOpen, onClose, asn, onFulfilled }) => {
+  const [carrier, setCarrier] = useState('');
+  const [tracking, setTracking] = useState('');
+  const toast = useToast();
+
+  const handleSubmit = async () => {
+    if (!carrier || !tracking) {
+      toast({ title: "All fields are required.", status: 'warning', duration: 3000, isClosable: true });
+      return;
+    }
+    try {
+      await fulfillShipment(asn.asnNumber, {
+        itemsShipped: asn.lineItems || [],
+        shippingCarrier: carrier,
+        trackingNumber: tracking,
+      });
+      toast({ title: "Shipment Fulfilled!", status: 'success', duration: 3000, isClosable: true });
+      onFulfilled();
+      onClose();
+    } catch (error) {
+      toast({ title: "Fulfillment Failed", description: error.message, status: 'error', duration: 5000, isClosable: true });
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose}>
+      <ModalOverlay />
+      <ModalContent>
+        <ModalHeader>Fulfill Shipment: {asn?.asnNumber}</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody>
+          <VStack spacing={4}>
+            <FormControl isRequired>
+              <FormLabel>Shipping Carrier</FormLabel>
+              <Input placeholder="e.g., FedEx, DHL" value={carrier} onChange={(e) => setCarrier(e.target.value)} />
+            </FormControl>
+            <FormControl isRequired>
+              <FormLabel>Tracking Number</FormLabel>
+              <Input placeholder="e.g., 123456789" value={tracking} onChange={(e) => setTracking(e.target.value)} />
+            </FormControl>
+          </VStack>
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="ghost" mr={3} onClick={onClose}>Cancel</Button>
+          <Button colorScheme="blue" onClick={handleSubmit}>Confirm Fulfillment</Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
+};
 
 const VendorDashboard = () => {
-  const [assigned, setAssigned] = useState([]);
+  const [shipments, setShipments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [selectedAsn, setSelectedAsn] = useState(null); // To hold data for the fulfillment form
+  const [selectedAsn, setSelectedAsn] = useState(null);
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const fetchAssigned = async () => {
+  const fetchShipments = async () => {
     try {
       setLoading(true);
-      const data = await getAssignedShipments();
-      setAssigned(data);
+      const data = await getAsns(); // Fetches all shipments for this vendor
+      setShipments(data);
     } catch (err) {
-      setError('Failed to fetch assigned shipments.');
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAssigned();
+    fetchShipments();
   }, []);
 
   const handleFulfillClick = (asn) => {
-    // For now, we'll use a simple prompt. A modal form would be better in a real app.
-    const carrier = prompt("Enter Shipping Carrier:");
-    const tracking = prompt("Enter Tracking Number:");
-    
-    if (carrier && tracking) {
-      const fulfillmentData = {
-        // In a real app, you'd have inputs for partial shipments
-        itemsShipped: asn.lineItems, 
-        shippingCarrier: carrier,
-        trackingNumber: tracking,
-      };
-
-      fulfillShipment(asn.asnNumber, fulfillmentData)
-        .then(() => {
-          alert('Shipment fulfilled successfully!');
-          fetchAssigned(); // Refresh the list
-        })
-        .catch(err => alert(`Error: ${err.response?.data?.message || err.message}`));
-    }
+    setSelectedAsn(asn);
+    onOpen();
   };
 
-  if (loading) return <p>Loading assigned shipments...</p>;
-  if (error) return <p style={{ color: 'red' }}>{error}</p>;
+  const orderedShipments = shipments.filter(s => s.status === 'ORDERED');
+  const inTransitShipments = shipments.filter(s => s.status === 'IN_TRANSIT');
+
+  if (loading) return <Flex justify="center" align="center" height="200px"><Spinner size="xl" /></Flex>;
 
   return (
-    <div>
-      <h2>Vendor Dashboard: Assigned Shipments</h2>
-      {assigned.length === 0 ? (
-        <p>No new shipments assigned.</p>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>ASN Number</th>
-              <th>Order ID</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {assigned.map((asn) => (
-              <tr key={asn.asnNumber}>
-                <td>{asn.asnNumber}</td>
-                <td>{asn.orderId}</td>
-                <td>
-                  <button onClick={() => handleFulfillClick(asn)}>Fulfill Shipment</button>
-                </td>
-              </tr>
+    <Box>
+      <Heading size="lg" mb={6}>Vendor Dashboard</Heading>
+      <Tabs variant="enclosed-colored">
+        <TabList>
+          <Tab>New Orders ({orderedShipments.length})</Tab>
+          <Tab>In Transit ({inTransitShipments.length})</Tab>
+        </TabList>
+        <TabPanels>
+          <TabPanel>
+            <VStack spacing={4} align="stretch">
+              {orderedShipments.map((asn) => (
+                <Flex key={asn.asnNumber} p={5} borderWidth="1px" borderRadius="lg" boxShadow="sm" align="center">
+                  <Box>
+                    <Heading size="md">{asn.asnNumber}</Heading>
+                    <Text fontSize="sm" color="gray.500">Order ID: {asn.orderId}</Text>
+                  </Box>
+                  <Spacer />
+                  <Button colorScheme="blue" onClick={() => handleFulfillClick(asn)}>Fulfill Shipment</Button>
+                </Flex>
+              ))}
+            </VStack>
+          </TabPanel>
+          <TabPanel>
+            {inTransitShipments.map((asn) => (
+              <Flex key={asn.asnNumber} p={5} borderWidth="1px" borderRadius="lg" boxShadow="sm" align="center">
+                <Box>
+                  <Heading size="md">{asn.asnNumber}</Heading>
+                  <Text fontSize="sm" color="gray.500">Tracking: {asn.trackingNumber}</Text>
+                </Box>
+                <Spacer />
+                <Tag size="lg" variant="solid" colorScheme={getStatusColor(asn.status)}>{asn.status}</Tag>
+              </Flex>
             ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
+      {selectedAsn && <FulfillmentModal isOpen={isOpen} onClose={onClose} asn={selectedAsn} onFulfilled={fetchShipments} />}
+    </Box>
   );
 };
 

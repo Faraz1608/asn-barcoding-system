@@ -1,5 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { getShipments } from '../services/api';
+import {
+  Box,
+  Heading,
+  Text,
+  VStack,
+  Flex,
+  Tag,
+  Spacer,
+  Alert,
+  AlertIcon,
+  Spinner
+} from '@chakra-ui/react';
+
+// Helper function to determine the color of the status tag
+const getStatusColor = (status) => {
+  switch (status) {
+    case 'ORDERED':
+      return 'blue';
+    case 'IN_TRANSIT':
+      return 'orange';
+    case 'RECEIVED_PENDING_REVIEW':
+      return 'purple';
+    case 'APPROVED_FOR_PAYMENT':
+      return 'green';
+    case 'DISCREPANCY_REPORTED':
+      return 'red';
+    default:
+      return 'gray';
+  }
+};
 
 const ShipmentDashboard = () => {
   const [shipments, setShipments] = useState([]);
@@ -22,35 +52,44 @@ const ShipmentDashboard = () => {
     };
 
     fetchShipments();
-  }, []); // The empty array ensures this runs only once on mount
+  }, []);
 
-  if (loading) return <p>Loading shipments...</p>;
-  if (error) return <p style={{ color: 'red' }}>{error}</p>;
+  if (loading) return <Flex justify="center" align="center" height="200px"><Spinner size="xl" /></Flex>;
+  
+  if (error) return (
+    <Alert status="error">
+      <AlertIcon />
+      {error}
+    </Alert>
+  );
 
   return (
-    <div>
-      <h2>Shipment Dashboard</h2>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr style={{ borderBottom: '1px solid #ddd' }}>
-            <th style={{ textAlign: 'left', padding: '8px' }}>ASN Number</th>
-            <th style={{ textAlign: 'left', padding: '8px' }}>Order ID</th>
-            <th style={{ textAlign: 'left', padding: '8px' }}>Status</th>
-            <th style={{ textAlign: 'left', padding: '8px' }}>Created At</th>
-          </tr>
-        </thead>
-        <tbody>
-          {shipments.map((shipment) => (
-            <tr key={shipment.asnNumber} style={{ borderBottom: '1px solid #eee' }}>
-              <td style={{ padding: '8px' }}>{shipment.asnNumber}</td>
-              <td style={{ padding: '8px' }}>{shipment.orderId}</td>
-              <td style={{ padding: '8px' }}>{shipment.status}</td>
-              <td style={{ padding: '8px' }}>{new Date(shipment.createdAt).toLocaleString()}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Box>
+      <Heading size="lg" mb={6}>Shipment Dashboard</Heading>
+      <VStack spacing={4} align="stretch">
+        {shipments.length === 0 ? (
+          <Text>No shipments found.</Text>
+        ) : (
+          shipments.map((shipment) => (
+            <Box key={shipment.asnNumber} p={5} borderWidth="1px" borderRadius="lg" boxShadow="sm">
+              <Flex align="center">
+                <Box>
+                  <Heading size="md">{shipment.asnNumber}</Heading>
+                  <Text fontSize="sm" color="gray.500">Order ID: {shipment.orderId}</Text>
+                </Box>
+                <Spacer />
+                <Tag size="lg" variant="solid" colorScheme={getStatusColor(shipment.status)}>
+                  {shipment.status}
+                </Tag>
+              </Flex>
+              <Text mt={4} fontSize="sm" color="gray.600">
+                Created: {new Date(shipment.createdAt).toLocaleString()}
+              </Text>
+            </Box>
+          ))
+        )}
+      </VStack>
+    </Box>
   );
 };
 

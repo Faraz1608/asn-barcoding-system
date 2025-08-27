@@ -1,9 +1,23 @@
-import React, { useState } from 'react';
+import {React, useState } from 'react';
 import { createOrder, createAsn } from '../services/api';
+import {
+  Box,
+  Button,
+  FormControl,
+  FormLabel,
+  Input,
+  VStack,
+  HStack,
+  Heading,
+  useToast,
+  IconButton
+} from '@chakra-ui/react';
+import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 
 const OrderCreationForm = () => {
   const [lineItems, setLineItems] = useState([{ productId: '', quantityRequested: '' }]);
-  const [message, setMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const toast = useToast();
 
   const handleInputChange = (index, event) => {
     const values = [...lineItems];
@@ -15,55 +29,96 @@ const OrderCreationForm = () => {
     setLineItems([...lineItems, { productId: '', quantityRequested: '' }]);
   };
 
+  const handleRemoveFields = (index) => {
+    const values = [...lineItems];
+    values.splice(index, 1);
+    setLineItems(values);
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setMessage('Creating order...');
+    setIsLoading(true);
     try {
-      // 1. Create the Order
       const orderResponse = await createOrder({ lineItems });
-      setMessage(`Order ${orderResponse.orderId} created! Generating ASN...`);
+      toast({
+        title: 'Order Created',
+        description: `Order ${orderResponse.orderId} created! Generating ASN...`,
+        status: 'info',
+        duration: 2000,
+        isClosable: true,
+      });
 
-      // 2. Create the ASN for the new Order
-      const asnData = { orderId: orderResponse.orderId, vendorId: 'VENDOR-A' }; // Vendor assignment placeholder
+      const asnData = { orderId: orderResponse.orderId, vendorId: 'VENDOR-A' }; // Placeholder
       const asnResponse = await createAsn(asnData);
       
-      setMessage(`Success! ASN ${asnResponse.asnNumber} generated for Order ${orderResponse.orderId}.`);
+      toast({
+        title: 'ASN Generated Successfully.',
+        description: `ASN ${asnResponse.asnNumber} for Order ${orderResponse.orderId}.`,
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
       setLineItems([{ productId: '', quantityRequested: '' }]); // Reset form
 
     } catch (error) {
-      setMessage(`Error: ${error.response?.data?.message || error.message}`);
+      toast({
+        title: 'An Error Occurred.',
+        description: error.response?.data?.message || error.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div>
-      <h2>Create New Shipment Order</h2>
-      <form onSubmit={handleSubmit}>
+    <Box p={8} borderWidth={1} borderRadius={8} boxShadow="lg">
+      <VStack as="form" onSubmit={handleSubmit} spacing={6}>
+        <Heading size="lg">Create New Shipment Order</Heading>
         {lineItems.map((item, index) => (
-          <div key={index}>
-            <input
-              type="text"
-              name="productId"
-              placeholder="Product ID / SKU"
-              value={item.productId}
-              onChange={event => handleInputChange(index, event)}
-              required
-            />
-            <input
-              type="number"
-              name="quantityRequested"
-              placeholder="Quantity"
-              value={item.quantityRequested}
-              onChange={event => handleInputChange(index, event)}
-              required
-            />
-          </div>
+          <HStack key={index} width="100%">
+            <FormControl isRequired>
+              <FormLabel>Product ID / SKU</FormLabel>
+              <Input
+                name="productId"
+                placeholder="SKU-12345"
+                value={item.productId}
+                onChange={event => handleInputChange(index, event)}
+              />
+            </FormControl>
+            <FormControl isRequired>
+              <FormLabel>Quantity</FormLabel>
+              <Input
+                type="number"
+                name="quantityRequested"
+                placeholder="150"
+                value={item.quantityRequested}
+                onChange={event => handleInputChange(index, event)}
+              />
+            </FormControl>
+            {lineItems.length > 1 && (
+              <IconButton
+                aria-label="Remove product"
+                icon={<DeleteIcon />}
+                colorScheme="red"
+                onClick={() => handleRemoveFields(index)}
+                alignSelf="flex-end"
+              />
+            )}
+          </HStack>
         ))}
-        <button type="button" onClick={handleAddFields}>Add Another Product</button>
-        <button type="submit">Create Order</button>
-      </form>
-      {message && <p>{message}</p>}
-    </div>
+        <HStack width="100%">
+          <Button onClick={handleAddFields} leftIcon={<AddIcon />}>
+            Add Product
+          </Button>
+          <Button type="submit" colorScheme="blue" isLoading={isLoading}>
+            Create Order
+          </Button>
+        </HStack>
+      </VStack>
+    </Box>
   );
 };
 
