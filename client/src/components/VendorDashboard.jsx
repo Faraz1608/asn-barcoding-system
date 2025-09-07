@@ -70,7 +70,7 @@ const VendorDashboard = () => {
   const fetchShipments = async () => {
     try {
       setLoading(true);
-      const data = await getAsns(); // Fetches all shipments for this vendor
+      const data = await getAssignedShipments(); // Fetches all shipments for this vendor
       setShipments(data);
     } catch (err) {
       console.error(err);
