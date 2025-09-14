@@ -1,6 +1,6 @@
+// client/src/services/api.js
 import axios from 'axios';
 
-// This will now correctly point to your proxied backend
 const API_URL = '/api';
 
 // --- Order and ASN Creation (Warehouse Ops) ---
@@ -13,6 +13,19 @@ export const createAsn = async (asnData) => {
   const response = await axios.post(`${API_URL}/asn`, asnData);
   return response.data;
 };
+
+export const downloadAsnPdf = async (asnNumber) => {
+    const response = await axios.get(`${API_URL}/asn/${asnNumber}/pdf`, {
+        responseType: 'blob',
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${asnNumber}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+};
+
 export const getShipments = async () => {
   const response = await axios.get(`${API_URL}/asn`);
   return response.data;
