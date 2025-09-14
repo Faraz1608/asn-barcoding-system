@@ -1,3 +1,4 @@
+// server/src/routes/asnRoutes.js
 import express from 'express';
 import * as asnController from '../controllers/asnController.js';
 
@@ -5,6 +6,9 @@ const router = express.Router();
 
 // Route for creating a new ASN
 router.post('/asn', asnController.createAsn);
+
+// Route for generating ASN PDF with barcode
+router.get('/asn/:asnNumber/pdf', asnController.generateAsnPdf);
 
 // Routes for Vendor
 router.get('/asn', asnController.getAsns);
