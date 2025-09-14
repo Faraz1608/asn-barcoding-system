@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 
 const asnSchema = new Schema({
   asnNumber: { type: String, required: true, unique: true },
-  orderId: { type: String, required: true, ref: 'Order' },
+  orderId: { type: Schema.Types.ObjectId, required: true, ref: 'Order' },
   vendorId: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
   status: { type: String, required: true, default: 'ORDERED' },
