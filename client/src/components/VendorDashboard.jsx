@@ -1,5 +1,6 @@
+// client/src/components/VendorDashboard.jsx
 import React, { useState, useEffect } from 'react';
-import { getAssignedShipments, fulfillShipment } from '../services/api';
+import { getAssignedShipments, fulfillShipment, downloadAsnPdf } from '../services/api';
 import {
   Box, Heading, Text, VStack, Flex, Tag, Spacer, Button, Spinner,
   Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton,
@@ -27,6 +28,10 @@ const FulfillmentModal = ({ isOpen, onClose, asn, onFulfilled }) => {
         trackingNumber: tracking,
       });
       toast({ title: "Shipment Fulfilled!", status: 'success', duration: 3000, isClosable: true });
+      
+      // Download the PDF after successful fulfillment
+      downloadAsnPdf(asn.asnNumber);
+
       onFulfilled();
       onClose();
     } catch (error) {
@@ -87,6 +92,10 @@ const VendorDashboard = () => {
     setSelectedAsn(asn);
     onOpen();
   };
+  
+  const handleDownloadPdf = (asnNumber) => {
+    downloadAsnPdf(asnNumber);
+  };
 
   const orderedShipments = shipments.filter(s => s.status === 'ORDERED');
   const inTransitShipments = shipments.filter(s => s.status === 'IN_TRANSIT');
@@ -124,6 +133,7 @@ const VendorDashboard = () => {
                   <Text fontSize="sm" color="gray.500">Tracking: {asn.trackingNumber}</Text>
                 </Box>
                 <Spacer />
+                <Button colorScheme="green" onClick={() => handleDownloadPdf(asn.asnNumber)}>Download PDF</Button>
                 <Tag size="lg" variant="solid" colorScheme={getStatusColor(asn.status)}>{asn.status}</Tag>
               </Flex>
             ))}
